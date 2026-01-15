@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "items": {
+      "type": "json",
+      "required": true
+    },
+    "total": {
+      "type": "decimal",
+      "required": true
+    },
+    "orderStatus": {
+      "type": "enumeration",
+      "required": true,
+      "default": "pending",
+      "enum": [
+        "pending",
+        "paid",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "orderNumber": {
+      "type": "string",
+      "unique": true
+    },
+    "mpPaymentId": {
+      "type": "string"
+    },
+    "mpStatus": {
+      "type": "string"
+    },
+    "mpStatusDetail": {
+      "type": "string"
+    },
+    "mpMerchantOrderId": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "shippingAddress": {
+      "type": "json"
+    }
+  }
+}

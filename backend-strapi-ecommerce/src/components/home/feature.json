@@ -1,0 +1,28 @@
+{
+  "collectionName": "components_home_features",
+  "info": {
+    "displayName": "feature"
+  },
+  "options": {},
+  "attributes": {
+    "icon": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images",
+        "files"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "default": "Envíos a todo el país",
+      "required": true
+    },
+    "description": {
+      "type": "text",
+      "default": "Envíos a todo el país"
+    }
+  },
+  "config": {}
+}

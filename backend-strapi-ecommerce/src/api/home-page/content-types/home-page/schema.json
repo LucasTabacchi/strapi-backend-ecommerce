@@ -1,0 +1,50 @@
+{
+  "kind": "singleType",
+  "collectionName": "home_pages",
+  "info": {
+    "singularName": "home-page",
+    "pluralName": "home-pages",
+    "displayName": "home-page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "hero": {
+      "type": "component",
+      "component": "home.hero",
+      "repeatable": false
+    },
+    "features": {
+      "type": "component",
+      "component": "home.feature",
+      "repeatable": true
+    },
+    "bestSellersTitle": {
+      "type": "string",
+      "required": true
+    },
+    "bestSellers": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::product.product"
+    },
+    "moreProductsText": {
+      "type": "string",
+      "default": "\"Ver más productos\""
+    },
+    "footerText": {
+      "type": "string",
+      "default": "© 2026 Mi Tienda"
+    },
+    "instagram": {
+      "type": "string",
+      "default": "https://instagram.com/mitienda"
+    },
+    "facebook": {
+      "type": "string",
+      "default": "https://facebook.com/mitienda"
+    }
+  }
+}

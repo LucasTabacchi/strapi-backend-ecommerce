@@ -1,0 +1,46 @@
+{
+  "collectionName": "components_home_heroes",
+  "info": {
+    "displayName": "hero"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Elegí tus favoritos",
+      "required": true
+    },
+    "subtitle": {
+      "type": "string",
+      "default": "Sabores para elegir, recuerdos para guardar",
+      "required": true
+    },
+    "backgroundImage": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images",
+        "files"
+      ]
+    },
+    "highlightImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files"
+      ]
+    },
+    "ctaText": {
+      "type": "string",
+      "default": "Ver productos",
+      "required": false
+    },
+    "ctaLink": {
+      "type": "string",
+      "default": "/productos"
+    }
+  },
+  "config": {}
+}
