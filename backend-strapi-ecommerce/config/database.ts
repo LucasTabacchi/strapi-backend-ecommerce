@@ -7,9 +7,9 @@ export default ({ env }) => ({
       database: env('PGDATABASE'),
       user: env('PGUSER'),
       password: env('PGPASSWORD'),
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      ssl: env.bool('DATABASE_SSL', true)
+        ? { rejectUnauthorized: false }
+        : false,
     },
     pool: {
       min: 0,
