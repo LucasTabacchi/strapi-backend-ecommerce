@@ -1,5 +1,4 @@
 {
-{
   "kind": "collectionType",
   "collectionName": "orders",
   "info": {
@@ -55,12 +54,9 @@
     "mpMerchantOrderId": {
       "type": "string"
     },
-
-    /* ✅ CAMPO NUEVO */
     "mpExternalReference": {
       "type": "string"
     },
-
     "phone": {
       "type": "string"
     },
@@ -69,4 +65,3 @@
     }
   }
 }
-
