@@ -62,6 +62,10 @@
     },
     "shippingAddress": {
       "type": "json"
+    },
+    "stockAdjusted": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

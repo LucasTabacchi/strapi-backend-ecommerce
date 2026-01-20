@@ -488,6 +488,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
       Schema.Attribute.Private;
+    mpExternalReference: Schema.Attribute.String;
     mpMerchantOrderId: Schema.Attribute.String;
     mpPaymentId: Schema.Attribute.String;
     mpStatus: Schema.Attribute.String;
@@ -502,6 +503,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     phone: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     shippingAddress: Schema.Attribute.JSON;
+    stockAdjusted: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     total: Schema.Attribute.Decimal & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
