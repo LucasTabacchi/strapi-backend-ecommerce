@@ -35,7 +35,9 @@
         "pending",
         "paid",
         "failed",
-        "cancelled"
+        "cancelled",
+        "shipped",
+        "delivered"
       ]
     },
     "orderNumber": {
