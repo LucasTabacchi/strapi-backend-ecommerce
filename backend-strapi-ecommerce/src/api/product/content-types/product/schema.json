@@ -16,9 +16,9 @@
       "required": true
     },
     "slug": {
-      "type": "string",
-      "required": false,
-      "unique": true
+      "type": "uid",
+      "targetField": "title",
+      "required": true
     },
     "description": {
       "type": "text"
@@ -49,12 +49,6 @@
     },
     "off": {
       "type": "integer"
-    },
-    "review": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::review.review",
-      "mappedBy": "product"
     },
     "reviews": {
       "type": "relation",

@@ -13,7 +13,7 @@
   "attributes": {
     "product": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "manyToOne",
       "target": "api::product.product",
       "inversedBy": "review"
     },

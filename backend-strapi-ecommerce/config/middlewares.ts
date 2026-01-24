@@ -1,22 +1,20 @@
-export default [
-  'strapi::errors',
-  'strapi::security',
+export default ({ env }) => [
+  "strapi::errors",
+  "strapi::security",
   {
-    name: 'strapi::cors',
+    name: "strapi::cors",
     config: {
-      origin: [
-        'http://localhost:3000',
-      ],
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      headers: ['Content-Type', 'Authorization'],
+      origin: env.array("CORS_ORIGINS", ["http://localhost:3000"]),
+      methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+      headers: ["Content-Type","Authorization"],
       credentials: true,
     },
   },
-  'strapi::poweredBy',
-  'strapi::logger',
-  'strapi::query',
-  'strapi::body',
-  'strapi::session',
-  'strapi::favicon',
-  'strapi::public',
+  "strapi::poweredBy",
+  "strapi::logger",
+  "strapi::query",
+  "strapi::body",
+  "strapi::session",
+  "strapi::favicon",
+  "strapi::public",
 ];
