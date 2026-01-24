@@ -480,9 +480,12 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    appliedPromotions: Schema.Attribute.JSON;
+    coupon: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    discountTotal: Schema.Attribute.Decimal;
     email: Schema.Attribute.Email & Schema.Attribute.Required;
     items: Schema.Attribute.JSON & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -504,6 +507,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     shippingAddress: Schema.Attribute.JSON;
     stockAdjusted: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    subtotal: Schema.Attribute.Decimal;
     total: Schema.Attribute.Decimal & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -541,14 +545,72 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     off: Schema.Attribute.Integer;
     price: Schema.Attribute.Decimal & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
-    review: Schema.Attribute.Relation<'oneToOne', 'api::review.review'>;
     reviews: Schema.Attribute.Relation<'oneToMany', 'api::review.review'>;
-    slug: Schema.Attribute.String & Schema.Attribute.Unique;
+    slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
     stock: Schema.Attribute.Integer;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiPromotionPromotion extends Struct.CollectionTypeSchema {
+  collectionName: 'promotions';
+  info: {
+    description: 'Reglas de promociones y cupones';
+    displayName: 'Promotion';
+    pluralName: 'promotions';
+    singularName: 'promotion';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    appliesTo: Schema.Attribute.Enumeration<['order', 'category', 'product']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'order'>;
+    categories: Schema.Attribute.JSON;
+    code: Schema.Attribute.UID<'name'>;
+    combinable: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    discountType: Schema.Attribute.Enumeration<
+      ['percent', 'fixed', 'free_shipping']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'percent'>;
+    discountValue: Schema.Attribute.Decimal;
+    enabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    endAt: Schema.Attribute.DateTime;
+    excludedCategories: Schema.Attribute.JSON;
+    excludedProductIds: Schema.Attribute.JSON;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::promotion.promotion'
+    > &
+      Schema.Attribute.Private;
+    maxDiscount: Schema.Attribute.Decimal;
+    minBoxes: Schema.Attribute.Integer;
+    minItems: Schema.Attribute.Integer;
+    minSubtotal: Schema.Attribute.Decimal;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    priority: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<100>;
+    productIds: Schema.Attribute.JSON;
+    publishedAt: Schema.Attribute.DateTime;
+    requiresCoupon: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    stackableWithExclusive: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    startAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    usageLimitTotal: Schema.Attribute.Integer;
+    usedCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
   };
 }
 
@@ -574,7 +636,7 @@ export interface ApiReviewReview extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     name: Schema.Attribute.String & Schema.Attribute.Required;
-    product: Schema.Attribute.Relation<'oneToOne', 'api::product.product'>;
+    product: Schema.Attribute.Relation<'manyToOne', 'api::product.product'>;
     publishedAt: Schema.Attribute.DateTime;
     rating: Schema.Attribute.Integer &
       Schema.Attribute.Required &
@@ -1107,6 +1169,7 @@ declare module '@strapi/strapi' {
       'api::home-page.home-page': ApiHomePageHomePage;
       'api::order.order': ApiOrderOrder;
       'api::product.product': ApiProductProduct;
+      'api::promotion.promotion': ApiPromotionPromotion;
       'api::review.review': ApiReviewReview;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

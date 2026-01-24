@@ -68,6 +68,14 @@
     "stockAdjusted": {
       "type": "boolean",
       "default": false
-    }
+    },
+    "subtotal": {
+      "type": "decimal" },
+    "discountTotal": {
+      "type": "decimal" },
+    "coupon": {
+      "type": "string" },
+    "appliedPromotions": {
+      "type": "json" }
   }
 }
