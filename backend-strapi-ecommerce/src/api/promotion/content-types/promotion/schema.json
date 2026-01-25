@@ -12,50 +12,96 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "name": { "type": "string", "required": true },
-    "description": { "type": "text" },
-
-    "enabled": { "type": "boolean", "default": true },
-
-    "code": { "type": "uid", "targetField": "name" },
-
-    "requiresCoupon": { "type": "boolean", "default": false },
-
-    "startAt": { "type": "datetime" },
-    "endAt": { "type": "datetime" },
-
-    "priority": { "type": "integer", "default": 100 },
-
-    "combinable": { "type": "boolean", "default": false },
-    "stackableWithExclusive": { "type": "boolean", "default": false },
-
-    "minSubtotal": { "type": "decimal" },
-    "minItems": { "type": "integer" },
-    "minBoxes": { "type": "integer" },
-
-    "categories": { "type": "json" },
-    "excludedCategories": { "type": "json" },
-
-    "productIds": { "type": "json" },
-    "excludedProductIds": { "type": "json" },
-
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "code": {
+      "type": "uid",
+      "targetField": "name"
+    },
+    "requiresCoupon": {
+      "type": "boolean",
+      "default": false
+    },
+    "startAt": {
+      "type": "datetime"
+    },
+    "endAt": {
+      "type": "datetime"
+    },
+    "priority": {
+      "type": "integer",
+      "default": 100
+    },
+    "combinable": {
+      "type": "boolean",
+      "default": false
+    },
+    "stackableWithExclusive": {
+      "type": "boolean",
+      "default": false
+    },
+    "minSubtotal": {
+      "type": "decimal"
+    },
+    "minItems": {
+      "type": "integer"
+    },
+    "minBoxes": {
+      "type": "integer"
+    },
+    "categories": {
+      "type": "json"
+    },
+    "excludedCategories": {
+      "type": "json"
+    },
+    "productIds": {
+      "type": "json"
+    },
+    "excludedProductIds": {
+      "type": "json"
+    },
     "discountType": {
       "type": "enumeration",
-      "enum": ["percent", "fixed", "free_shipping"],
       "required": true,
-      "default": "percent"
+      "default": "percent",
+      "enum": [
+        "percent",
+        "fixed",
+        "free_shipping"
+      ]
     },
-    "discountValue": { "type": "decimal" },
-    "maxDiscount": { "type": "decimal" },
-
+    "discountValue": {
+      "type": "decimal"
+    },
+    "maxDiscount": {
+      "type": "integer"
+    },
     "appliesTo": {
       "type": "enumeration",
-      "enum": ["order", "category", "product"],
       "required": true,
-      "default": "order"
+      "default": "order",
+      "enum": [
+        "order",
+        "category",
+        "product"
+      ]
     },
-
-    "usageLimitTotal": { "type": "integer" },
-    "usedCount": { "type": "integer", "default": 0 }
+    "usageLimitTotal": {
+      "type": "integer"
+    },
+    "usedCount": {
+      "type": "integer",
+      "default": 0
+    }
   }
 }

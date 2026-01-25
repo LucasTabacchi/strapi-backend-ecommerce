@@ -593,7 +593,7 @@ export interface ApiPromotionPromotion extends Struct.CollectionTypeSchema {
       'api::promotion.promotion'
     > &
       Schema.Attribute.Private;
-    maxDiscount: Schema.Attribute.Decimal;
+    maxDiscount: Schema.Attribute.Integer;
     minBoxes: Schema.Attribute.Integer;
     minItems: Schema.Attribute.Integer;
     minSubtotal: Schema.Attribute.Decimal;
