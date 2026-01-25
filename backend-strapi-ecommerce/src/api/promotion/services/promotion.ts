@@ -34,23 +34,29 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
     // 1) Normalizar items (acepta id o documentId)
     const rawItems = asArray<CartItemInput>(input.items)
       .map((it) => {
-        const id = Number(it?.id);
+        const idRaw = it?.id != null ? Number(it.id) : NaN;
+        const id = Number.isFinite(idRaw) && idRaw > 0 ? idRaw : null;
+
         const documentId = normStr(it?.documentId) || null;
         const qty = Math.max(1, Math.floor(Number(it?.qty) || 1));
-        return {
-          id: Number.isFinite(id) && id > 0 ? id : null,
-          documentId,
-          qty,
-        };
+
+        return { id, documentId, qty };
       })
-      .filter((it) => it.id != null || !!it.documentId);
+      .filter((it) => (it.id != null && it.id > 0) || !!it.documentId);
 
     if (!rawItems.length) {
       return { subtotal: 0, discountTotal: 0, total: 0, appliedPromotions: [] };
     }
 
     // 2) Traer productos reales (por id OR documentId)
-    const ids = Array.from(new Set(rawItems.map((x) => x.id).filter((x): x is number => x != null)));
+    const ids = Array.from(
+      new Set(
+        rawItems
+          .map((x) => x.id)
+          .filter((x): x is number => typeof x === "number" && Number.isFinite(x) && x > 0)
+      )
+    );
+
     const docIds = Array.from(
       new Set(rawItems.map((x) => x.documentId).filter((x): x is string => !!x))
     );
@@ -61,7 +67,8 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
     const products = await strapi.entityService.findMany("api::product.product", {
       filters: or.length ? { $or: or } : undefined,
-      // 👇 NO pongas documentId acá (te rompe TS). Igual lo leemos del objeto si existe.
+      // ⚠️ No incluyas "documentId" en fields (Strapi types no lo aceptan)
+      // Igual suele venir en el objeto y lo leemos con (p as any).documentId
       fields: ["title", "price", "off", "category", "slug"] as any,
       pagination: { pageSize: Math.max(100, ids.length + docIds.length) },
     });
@@ -76,9 +83,15 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       if (did) byDoc.set(did, p);
     }
 
+    // (debug opcional)
+    // console.log("[quote] ids:", ids, "docIds:", docIds, "found:", asArray(products).length);
+
     const lines = rawItems
       .map((it) => {
-        const p = (it.id != null ? byId.get(it.id) : null) || (it.documentId ? byDoc.get(it.documentId) : null);
+        const p =
+          (it.id != null ? byId.get(it.id) : null) ||
+          (it.documentId ? byDoc.get(it.documentId) : null);
+
         if (!p) return null;
 
         const unit = priceWithOff(num((p as any).price, 0), num((p as any).off, 0));
@@ -86,7 +99,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
         return {
           id: p.id,
-          documentId: normStr((p as any)?.documentId) || null,
+          documentId: normStr((p as any)?.documentId ?? (p as any)?.document_id) || null,
           qty: it.qty,
           title: (p as any).title,
           slug: (p as any).slug,
@@ -97,6 +110,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       })
       .filter(Boolean) as any[];
 
+    // Si no se encontró ningún producto, subtotal será 0 (y cupón no aplica)
     const subtotal = Math.round(lines.reduce((acc, l) => acc + l.lineSubtotal, 0));
     const totalItems = lines.reduce((acc, l) => acc + l.qty, 0);
     const totalBoxes = totalItems;
@@ -202,7 +216,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       })
       .filter(Boolean) as any[];
 
-    // 5) Regla negocio: si hay cupón => NO se suman otras
+    // 5) Regla negocio: si hay cupón aplicado => NO se suman otras
     let applied: any[] = [];
     let discountTotal = 0;
 
