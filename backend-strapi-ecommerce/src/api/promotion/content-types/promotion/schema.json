@@ -24,8 +24,8 @@
       "default": true
     },
     "code": {
-      "type": "uid",
-      "targetField": "name"
+      "type": "string",
+      "unique": true
     },
     "requiresCoupon": {
       "type": "boolean",

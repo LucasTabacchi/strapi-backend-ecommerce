@@ -107,6 +107,32 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       // 3) Promos activas
       const shipping = num(input.shipping, 0);
 
+      // ✅ PRIMERO: Traer TODAS las promociones sin filtros para ver qué hay
+      console.log("[QUOTE DEBUG] === PASO 1: Buscando TODAS las promociones ===");
+      const allPromos = await strapi.entityService.findMany("api::promotion.promotion", {
+        pagination: { pageSize: 200 },
+      });
+      console.log("[QUOTE DEBUG] Total promociones en BD:", allPromos.length);
+      
+      if (allPromos.length > 0) {
+        asArray(allPromos).forEach((p: any) => {
+          console.log(`  - ID: ${p.id}`);
+          console.log(`    Nombre: ${p.name}`);
+          console.log(`    Código: ${p.code}`);
+          console.log(`    Enabled: ${p.enabled}`);
+          console.log(`    PublishedAt: ${p.publishedAt}`);
+          console.log(`    StartAt: ${p.startAt}`);
+          console.log(`    EndAt: ${p.endAt}`);
+          console.log(`    RequiresCoupon: ${p.requiresCoupon}`);
+          console.log(`    DiscountType: ${p.discountType}`);
+          console.log(`    DiscountValue: ${p.discountValue}`);
+          console.log("    ---");
+        });
+      }
+
+      // ✅ SEGUNDO: Aplicar filtros uno por uno
+      console.log("[QUOTE DEBUG] === PASO 2: Aplicando filtros ===");
+      
       const promos = await strapi.entityService.findMany("api::promotion.promotion", {
         filters: {
           enabled: true,
@@ -121,7 +147,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       });
 
       // ✅ LOG 2: Ver todas las promos activas
-      console.log("[QUOTE DEBUG] Promociones activas encontradas:", promos.length);
+      console.log("[QUOTE DEBUG] Promociones activas encontradas después de filtros:", promos.length);
       asArray(promos).forEach((p: any) => {
         console.log(`  - ID: ${p.id}, Nombre: ${p.name}, Código: ${p.code}, RequiresCoupon: ${p.requiresCoupon}`);
       });
