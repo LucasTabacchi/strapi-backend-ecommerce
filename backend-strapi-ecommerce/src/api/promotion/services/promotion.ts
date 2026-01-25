@@ -138,19 +138,23 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       const promoCT = strapi.contentTypes["api::promotion.promotion"];
       const hasDraftPublish = !!promoCT?.options?.draftAndPublish;
 
+      // 3) Promos activas (FORZAR PUBLISHED)
       const promos = await strapi.entityService.findMany("api::promotion.promotion", {
+        // ✅ clave: traer solo publicadas
+        status: "published" as any,
+
         filters: {
           enabled: true,
-          ...(hasDraftPublish ? { publishedAt: { $notNull: true } } : {}),
           $and: [
             { $or: [{ startAt: null }, { startAt: { $lte: now.toISOString() } }] },
             { $or: [{ endAt: null }, { endAt: { $gte: now.toISOString() } }] },
           ],
         },
+
         sort: [{ priority: "asc" }, { id: "asc" }],
-        start: 0,
-        limit: 200,
+        pagination: { pageSize: 200 },
       });
+
 
       // ✅ LOG 2: Ver todas las promos activas
       console.log("[QUOTE DEBUG] Promociones activas encontradas después de filtros:", promos.length);

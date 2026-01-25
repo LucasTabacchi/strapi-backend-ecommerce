@@ -571,7 +571,7 @@ export interface ApiPromotionPromotion extends Struct.CollectionTypeSchema {
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'order'>;
     categories: Schema.Attribute.JSON;
-    code: Schema.Attribute.UID<'name'>;
+    code: Schema.Attribute.String & Schema.Attribute.Unique;
     combinable: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
