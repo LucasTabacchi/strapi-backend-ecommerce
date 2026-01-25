@@ -1,3 +1,4 @@
+// backend/src/api/promotion/services/promotion.ts
 import { factories } from "@strapi/strapi";
 
 type CartItemInput = { id?: number | null; documentId?: string | null; qty: number };
@@ -22,27 +23,16 @@ function priceWithOff(price: number, off?: number) {
   return hasOff ? Math.round(price * (1 - off / 100)) : price;
 }
 
-/**
- * ✅ Strapi v5: findMany devuelve un array de entities planas.
- *    El campo "documentId" existe en v5, pero a veces TS/params no lo tipa como "field".
- *    Por eso NO lo pedimos en "fields" y lo leemos desde el objeto.
- */
-
-/**
- * ✅ MUY IMPORTANTE (tu bug actual):
- * En tu Product, `category` ES UN CAMPO TEXT (no relación).
- * Entonces:
- * - NO se puede pedir "category" en `fields` como si fuese relation/populate
- * - Tampoco hay que usar populate.category
- * - Y al filtrar promo por categoría, trabajamos con string normalizado.
- */
-
 export default factories.createCoreService("api::promotion.promotion", ({ strapi }) => ({
   async quote(input: QuoteInput) {
     try {
       const now = new Date();
+      const coupon = normStr(input.coupon);
 
-      // 1) Normalizar items (acepta id o documentId)
+      // ✅ LOG 1: Ver qué cupón llega
+      console.log("[QUOTE DEBUG] Cupón recibido:", coupon);
+
+      // 1) Normalizar items
       const rawItems = asArray<CartItemInput>(input.items)
         .map((it) => {
           const id = Number(it?.id);
@@ -60,7 +50,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
         return { subtotal: 0, discountTotal: 0, total: 0, appliedPromotions: [] };
       }
 
-      // 2) Traer productos reales (por id OR documentId)
+      // 2) Traer productos reales
       const ids = Array.from(
         new Set(rawItems.map((x) => x.id).filter((x): x is number => x != null))
       );
@@ -70,11 +60,8 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
       const or: any[] = [];
       ids.forEach((id) => or.push({ id: { $eq: id } }));
-      // ✅ en Strapi v5 se puede filtrar por documentId
       docIds.forEach((d) => or.push({ documentId: { $eq: d } }));
 
-      // ✅ Para evitar el error "Invalid key category" NO pasamos `fields`
-      // y tampoco `populate`. Traemos el entity completo (para 1-200 items es ok).
       const products = await strapi.entityService.findMany("api::product.product", {
         filters: or.length ? { $or: or } : undefined,
         pagination: { pageSize: Math.max(200, ids.length + docIds.length) },
@@ -85,7 +72,6 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
       for (const p of asArray(products)) {
         if (p?.id) byId.set(p.id, p);
-
         const did = normStr((p as any)?.documentId ?? (p as any)?.document_id);
         if (did) byDoc.set(did, p);
       }
@@ -107,7 +93,6 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
             qty: it.qty,
             title: (p as any).title,
             slug: (p as any).slug,
-            // ✅ Product.category es TEXT
             category: normStr((p as any).category),
             unit,
             lineSubtotal,
@@ -120,7 +105,6 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       const totalBoxes = totalItems;
 
       // 3) Promos activas
-      const coupon = normStr(input.coupon);
       const shipping = num(input.shipping, 0);
 
       const promos = await strapi.entityService.findMany("api::promotion.promotion", {
@@ -136,42 +120,67 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
         pagination: { pageSize: 200 },
       });
 
+      // ✅ LOG 2: Ver todas las promos activas
+      console.log("[QUOTE DEBUG] Promociones activas encontradas:", promos.length);
+      asArray(promos).forEach((p: any) => {
+        console.log(`  - ID: ${p.id}, Nombre: ${p.name}, Código: ${p.code}, RequiresCoupon: ${p.requiresCoupon}`);
+      });
+
       // 4) Evaluar promos
       const candidates = asArray(promos)
         .map((p: any) => {
           const requiresCoupon = !!p.requiresCoupon;
           const code = normStr(p.code);
 
+          // ✅ LOG 3: Ver cada evaluación
           if (requiresCoupon) {
-            if (!coupon) return null;
-            if (lower(coupon) !== lower(code)) return null;
+            console.log(`[QUOTE DEBUG] Evaluando promo con cupón: ${code}`);
+            console.log(`  - Cupón ingresado: "${coupon}"`);
+            console.log(`  - Cupón de promo: "${code}"`);
+            console.log(`  - Coinciden: ${lower(coupon) === lower(code)}`);
+            
+            if (!coupon) {
+              console.log(`  ❌ Descartada: no hay cupón ingresado`);
+              return null;
+            }
+            if (lower(coupon) !== lower(code)) {
+              console.log(`  ❌ Descartada: cupón no coincide`);
+              return null;
+            }
+            console.log(`  ✅ Cupón válido!`);
           }
 
           const usageLimitTotal = p.usageLimitTotal == null ? null : num(p.usageLimitTotal, 0);
           const usedCount = num(p.usedCount, 0);
-          if (usageLimitTotal != null && usageLimitTotal > 0 && usedCount >= usageLimitTotal)
+          if (usageLimitTotal != null && usageLimitTotal > 0 && usedCount >= usageLimitTotal) {
+            console.log(`  ❌ Descartada: límite de uso alcanzado (${usedCount}/${usageLimitTotal})`);
             return null;
+          }
 
           const minSubtotal = p.minSubtotal == null ? null : num(p.minSubtotal, 0);
-          if (minSubtotal != null && minSubtotal > 0 && subtotal < minSubtotal) return null;
+          if (minSubtotal != null && minSubtotal > 0 && subtotal < minSubtotal) {
+            console.log(`  ❌ Descartada: subtotal insuficiente (${subtotal} < ${minSubtotal})`);
+            return null;
+          }
 
           const minItems = p.minItems == null ? null : num(p.minItems, 0);
-          if (minItems != null && minItems > 0 && totalItems < minItems) return null;
+          if (minItems != null && minItems > 0 && totalItems < minItems) {
+            console.log(`  ❌ Descartada: items insuficientes (${totalItems} < ${minItems})`);
+            return null;
+          }
 
           const minBoxes = p.minBoxes == null ? null : num(p.minBoxes, 0);
-          if (minBoxes != null && minBoxes > 0 && totalBoxes < minBoxes) return null;
+          if (minBoxes != null && minBoxes > 0 && totalBoxes < minBoxes) {
+            console.log(`  ❌ Descartada: cajas insuficientes (${totalBoxes} < ${minBoxes})`);
+            return null;
+          }
 
           const appliesTo = normStr(p.appliesTo) || "order";
-
-          // ✅ Promotion.categories / excludedCategories en tu modelo parecen JSON/array de strings
           const categories = asArray<string>(p.categories).map(normStr).filter(Boolean);
           const excludedCategories = asArray<string>(p.excludedCategories).map(normStr).filter(Boolean);
-
-          // ✅ Promotion.productIds / excludedProductIds (numéricos)
           const productIds = asArray<number>(p.productIds)
             .map((x) => Number(x))
             .filter((x) => Number.isFinite(x));
-
           const excludedProductIds = asArray<number>(p.excludedProductIds)
             .map((x) => Number(x))
             .filter((x) => Number.isFinite(x));
@@ -179,26 +188,26 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
           const eligibleLines = lines.filter((l) => {
             if (excludedProductIds.includes(l.id)) return false;
             if (excludedCategories.map(lower).includes(lower(l.category))) return false;
-
             if (appliesTo === "order") return true;
-
             if (appliesTo === "category") {
               if (!categories.length) return false;
               return categories.map(lower).includes(lower(l.category));
             }
-
             if (appliesTo === "product") {
               if (!productIds.length) return false;
               return productIds.includes(l.id);
             }
-
             return true;
           });
 
           const eligibleSubtotal = Math.round(
             eligibleLines.reduce((acc, l) => acc + l.lineSubtotal, 0)
           );
-          if (eligibleSubtotal <= 0) return null;
+          
+          if (eligibleSubtotal <= 0) {
+            console.log(`  ❌ Descartada: subtotal elegible = 0`);
+            return null;
+          }
 
           const discountType = normStr(p.discountType) || "percent";
           const discountValue = num(p.discountValue, 0);
@@ -210,7 +219,13 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
           else if (discountType === "free_shipping") amount = Math.round(Math.min(shipping, eligibleSubtotal));
 
           if (maxDiscount != null && maxDiscount > 0) amount = Math.min(amount, Math.round(maxDiscount));
-          if (amount <= 0) return null;
+          
+          if (amount <= 0) {
+            console.log(`  ❌ Descartada: amount = 0`);
+            return null;
+          }
+
+          console.log(`  ✅ CANDIDATA: ${p.name}, Descuento: $${amount}`);
 
           return {
             id: p.id,
@@ -226,18 +241,30 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
         })
         .filter(Boolean) as any[];
 
+      // ✅ LOG 4: Ver candidatas finales
+      console.log("[QUOTE DEBUG] Candidatas finales:", candidates.length);
+      candidates.forEach(c => {
+        console.log(`  - ${c.name} (${c.code || 'sin código'}): $${c.amount}`);
+      });
+
       // 5) Regla negocio: si hay cupón => NO se suman otras
       let applied: any[] = [];
       let discountTotal = 0;
 
       const couponCandidates = candidates.filter((c) => c.requiresCoupon);
+      
+      // ✅ LOG 5: Ver si hay candidatas con cupón
+      console.log("[QUOTE DEBUG] Candidatas que requieren cupón:", couponCandidates.length);
+      
       if (coupon && couponCandidates.length) {
         couponCandidates.sort(
           (a, b) => b.amount - a.amount || a.priority - b.priority || a.id - b.id
         );
         applied = [couponCandidates[0]];
         discountTotal = couponCandidates[0].amount;
+        console.log("[QUOTE DEBUG] ✅ Cupón aplicado:", couponCandidates[0].name, `$${discountTotal}`);
       } else {
+        console.log("[QUOTE DEBUG] ❌ No se aplicó cupón");
         const exclusives = candidates.filter((c) => !c.combinable);
         const combinables = candidates.filter((c) => c.combinable);
 
@@ -267,7 +294,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       discountTotal = Math.min(discountTotal, subtotal);
       const total = subtotal - discountTotal;
 
-      return {
+      const result = {
         subtotal,
         discountTotal,
         total,
@@ -279,8 +306,12 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
           meta: p.meta,
         })),
       };
+
+      // ✅ LOG 6: Resultado final
+      console.log("[QUOTE DEBUG] Resultado final:", JSON.stringify(result, null, 2));
+
+      return result;
     } catch (err: any) {
-      // ✅ Log útil en Strapi
       strapi.log.error(`[promotions.quote] error: ${err?.message || err}`);
       throw err;
     }
