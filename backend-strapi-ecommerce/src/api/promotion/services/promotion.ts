@@ -135,10 +135,13 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       // ✅ SEGUNDO: Aplicar filtros uno por uno
       console.log("[QUOTE DEBUG] === PASO 2: Aplicando filtros ===");
       
+      const promoCT = strapi.contentTypes["api::promotion.promotion"];
+      const hasDraftPublish = !!promoCT?.options?.draftAndPublish;
+
       const promos = await strapi.entityService.findMany("api::promotion.promotion", {
         filters: {
           enabled: true,
-          publishedAt: { $notNull: true },
+          ...(hasDraftPublish ? { publishedAt: { $notNull: true } } : {}),
           $and: [
             { $or: [{ startAt: null }, { startAt: { $lte: now.toISOString() } }] },
             { $or: [{ endAt: null }, { endAt: { $gte: now.toISOString() } }] },
