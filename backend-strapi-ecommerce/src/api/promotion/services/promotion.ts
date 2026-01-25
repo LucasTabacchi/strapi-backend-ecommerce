@@ -1,6 +1,6 @@
 import { factories } from "@strapi/strapi";
 
-type CartItemInput = { id?: number | string | null; documentId?: string | null; qty: number };
+type CartItemInput = { id?: number | null; documentId?: string | null; qty: number };
 type QuoteInput = { items: CartItemInput[]; coupon?: string; shipping?: number };
 
 function asArray<T = any>(v: any): T[] {
@@ -22,21 +22,6 @@ function priceWithOff(price: number, off?: number) {
   return hasOff ? Math.round(price * (1 - off / 100)) : price;
 }
 
-// ✅ soporta entityService plano (v4/v5) y también { id, attributes } (REST-shape)
-function unwrapEntity(p: any) {
-  if (!p) return null;
-  if (p.attributes && typeof p.attributes === "object") {
-    return { id: p.id, documentId: (p as any).documentId ?? p.attributes.documentId, ...p.attributes };
-  }
-  return p;
-}
-
-function catName(p: any) {
-  const c = p?.category;
-  // puede venir como relación { name } o como string o null
-  return String(c?.name ?? c ?? "").trim();
-}
-
 export default factories.createCoreService("api::promotion.promotion", ({ strapi }) => ({
   async quote(input: QuoteInput) {
     const now = new Date();
@@ -44,11 +29,11 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
     // 1) Normalizar items (acepta id o documentId)
     const rawItems = asArray<CartItemInput>(input.items)
       .map((it) => {
-        const idNum = Number(it?.id);
+        const id = Number(it?.id);
         const documentId = normStr(it?.documentId) || null;
         const qty = Math.max(1, Math.floor(Number(it?.qty) || 1));
         return {
-          id: Number.isFinite(idNum) && idNum > 0 ? idNum : null,
+          id: Number.isFinite(id) && id > 0 ? id : null,
           documentId,
           qty,
         };
@@ -63,30 +48,23 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
     const ids = Array.from(new Set(rawItems.map((x) => x.id).filter((x): x is number => x != null)));
     const docIds = Array.from(new Set(rawItems.map((x) => x.documentId).filter((x): x is string => !!x)));
 
-    // ✅ Importante: NO poner relaciones en fields. Category va por populate.
+    const or: any[] = [];
+    ids.forEach((id) => or.push({ id: { $eq: id } }));
+    docIds.forEach((d) => or.push({ documentId: { $eq: d } }));
+
+    // ✅ IMPORTANTE:
+    // - NO uses populate: { category: ... } porque NO es relación
+    // - Para evitar errores de typing con `fields`, traemos el entity completo (es barato para 1-200 items)
     const products = await strapi.entityService.findMany("api::product.product", {
-      filters:
-        ids.length || docIds.length
-          ? {
-              $or: [
-                ...(ids.length ? [{ id: { $in: ids } }] : []),
-                ...(docIds.length ? [{ documentId: { $in: docIds } }] : []),
-              ],
-            }
-          : undefined,
-      fields: ["title", "price", "off", "slug"] as any,
-      populate: { category: { fields: ["name"] } } as any,
-      pagination: { pageSize: 200 },
+      filters: or.length ? { $or: or } : undefined,
+      pagination: { pageSize: Math.max(200, ids.length + docIds.length) },
     });
 
     const byId = new Map<number, any>();
     const byDoc = new Map<string, any>();
 
-    for (const raw of asArray(products)) {
-      const p = unwrapEntity(raw);
-      if (!p) continue;
-
-      if (p.id) byId.set(Number(p.id), p);
+    for (const p of asArray(products)) {
+      if (p?.id) byId.set(p.id, p);
 
       const did = normStr((p as any)?.documentId ?? (p as any)?.document_id);
       if (did) byDoc.set(did, p);
@@ -100,26 +78,21 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
         if (!p) return null;
 
-        const unit = priceWithOff(num(p.price, 0), num(p.off, 0));
+        const unit = priceWithOff(num((p as any).price, 0), num((p as any).off, 0));
         const lineSubtotal = unit * it.qty;
 
         return {
-          id: Number(p.id),
+          id: p.id,
           documentId: normStr((p as any)?.documentId) || null,
           qty: it.qty,
-          title: p.title,
-          slug: p.slug,
-          category: catName(p),
+          title: (p as any).title,
+          slug: (p as any).slug,
+          category: normStr((p as any).category), // ✅ category es string
           unit,
           lineSubtotal,
         };
       })
       .filter(Boolean) as any[];
-
-    // ✅ si no encontró productos, subtotal queda 0 -> eso te rompe cupones
-    if (!lines.length) {
-      return { subtotal: 0, discountTotal: 0, total: 0, appliedPromotions: [] };
-    }
 
     const subtotal = Math.round(lines.reduce((acc, l) => acc + l.lineSubtotal, 0));
     const totalItems = lines.reduce((acc, l) => acc + l.qty, 0);
@@ -144,9 +117,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
     // 4) Evaluar promos
     const candidates = asArray(promos)
-      .map((rawP: any) => {
-        const p = unwrapEntity(rawP) ?? rawP;
-
+      .map((p: any) => {
         const requiresCoupon = !!p.requiresCoupon;
         const code = normStr(p.code);
 
@@ -170,11 +141,12 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
         const appliesTo = normStr(p.appliesTo) || "order";
 
-        const categories = asArray<string>(p.categories);
-        const excludedCategories = asArray<string>(p.excludedCategories);
+        // ✅ Tus categories en Promotion probablemente sean un array de strings
+        const categories = asArray<string>(p.categories).map(normStr).filter(Boolean);
+        const excludedCategories = asArray<string>(p.excludedCategories).map(normStr).filter(Boolean);
 
-        const productIds = asArray<number>(p.productIds).map(Number).filter(Number.isFinite);
-        const excludedProductIds = asArray<number>(p.excludedProductIds).map(Number).filter(Number.isFinite);
+        const productIds = asArray<number>(p.productIds).map((x) => Number(x)).filter(Number.isFinite);
+        const excludedProductIds = asArray<number>(p.excludedProductIds).map((x) => Number(x)).filter(Number.isFinite);
 
         const eligibleLines = lines.filter((l) => {
           if (excludedProductIds.includes(l.id)) return false;
@@ -224,7 +196,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       })
       .filter(Boolean) as any[];
 
-    // 5) Regla: si hay cupón válido => NO sumar otras
+    // 5) Regla negocio: si hay cupón => NO se suman otras
     let applied: any[] = [];
     let discountTotal = 0;
 
