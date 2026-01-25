@@ -62,7 +62,6 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
     const productsA = ids.length
       ? await strapi.entityService.findMany("api::product.product", {
           filters: { id: { $in: ids } },
-          fields: ["title", "price", "off", "category", "slug", "documentId"],
           pagination: { pageSize: Math.max(100, ids.length) },
         })
       : [];
@@ -71,7 +70,6 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       ? await strapi.entityService.findMany("api::product.product", {
           // En v5 existe documentId; si estás en v4, docIds normalmente va a venir vacío
           filters: { documentId: { $in: docIds } } as any,
-          fields: ["title", "price", "off", "category", "slug", "documentId"],
           pagination: { pageSize: Math.max(100, docIds.length) },
         })
       : [];
