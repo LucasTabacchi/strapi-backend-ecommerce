@@ -64,7 +64,8 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
       const products = await strapi.entityService.findMany("api::product.product", {
         filters: or.length ? { $or: or } : undefined,
-        pagination: { pageSize: Math.max(200, ids.length + docIds.length) },
+        start: 0,
+        limit: Math.max(200, ids.length + docIds.length),
       });
 
       const byId = new Map<number, any>();
@@ -110,9 +111,10 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       // ✅ PRIMERO: Traer TODAS las promociones sin filtros para ver qué hay
       console.log("[QUOTE DEBUG] === PASO 1: Buscando TODAS las promociones ===");
       const allPromos = await strapi.entityService.findMany("api::promotion.promotion", {
-        pagination: { pageSize: 200 },
+        start: 0,
+        limit: 200,
       });
-      console.log("[QUOTE DEBUG] Total promociones en BD:", allPromos.length);
+      console.log("[QUOTE DEBUG] Total promociones en BD:", Array.isArray(allPromos) ? allPromos.length : 'No es array');
       
       if (allPromos.length > 0) {
         asArray(allPromos).forEach((p: any) => {
@@ -143,7 +145,8 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
           ],
         },
         sort: [{ priority: "asc" }, { id: "asc" }],
-        pagination: { pageSize: 200 },
+        start: 0,
+        limit: 200,
       });
 
       // ✅ LOG 2: Ver todas las promos activas
