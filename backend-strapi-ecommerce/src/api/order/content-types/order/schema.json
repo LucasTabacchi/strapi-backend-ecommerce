@@ -70,12 +70,22 @@
       "default": false
     },
     "subtotal": {
-      "type": "decimal" },
+      "type": "decimal"
+    },
     "discountTotal": {
-      "type": "decimal" },
+      "type": "decimal"
+    },
     "coupon": {
-      "type": "string" },
+      "type": "string"
+    },
     "appliedPromotions": {
-      "type": "json" }
+      "type": "json"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "orders"
+    }
   }
 }
