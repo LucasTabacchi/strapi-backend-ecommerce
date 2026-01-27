@@ -83,9 +83,9 @@
     },
     "user": {
       "type": "relation",
-      "relation": "oneToMany",
+      "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
-      "mappedBy": "orders"
+      "inversedBy": "orders"
     }
   }
 }
