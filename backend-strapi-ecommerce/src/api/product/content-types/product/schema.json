@@ -28,27 +28,28 @@
       "required": true
     },
     "stock": {
-      "type": "integer"
+      "type": "integer",
+      "min": 0,
+      "default": 0
     },
     "images": {
       "type": "media",
       "multiple": true,
-      "allowedTypes": [
-        "images",
-        "files",
-        "videos",
-        "audios"
-      ]
+      "allowedTypes": ["images"]
     },
     "isFeatured": {
-      "type": "boolean"
+      "type": "boolean",
+      "default": false
     },
     "category": {
       "type": "string",
       "required": true
     },
     "off": {
-      "type": "integer"
+      "type": "integer",
+      "min": 0,
+      "max": 100,
+      "default": 0
     },
     "reviews": {
       "type": "relation",

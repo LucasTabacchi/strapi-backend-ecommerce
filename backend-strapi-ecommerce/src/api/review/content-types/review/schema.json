@@ -15,7 +15,8 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::product.product",
-      "inversedBy": "reviews"
+      "inversedBy": "reviews",
+      "required": true
     },
     "name": {
       "type": "string",
