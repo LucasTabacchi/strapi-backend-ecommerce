@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "addresses",
+  "info": {
+    "singularName": "address",
+    "pluralName": "addresses",
+    "displayName": "Address",
+    "description": "Direcciones guardadas por usuario"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": { "visible": true },
+    "content-type-builder": { "visible": true }
+  },
+  "attributes": {
+    "label": { "type": "string" },
+    "fullName": { "type": "string" },
+    "phone": { "type": "string" },
+
+    "street": { "type": "string", "required": true },
+    "number": { "type": "string", "required": true },
+    "floor": { "type": "string" },
+    "apartment": { "type": "string" },
+
+    "city": { "type": "string", "required": true },
+    "province": { "type": "string", "required": true },
+    "zip": { "type": "string", "required": true },
+
+    "notes": { "type": "text" },
+
+    "isDefault": { "type": "boolean", "default": false },
+
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "required": true
+    }
+  }
+}
