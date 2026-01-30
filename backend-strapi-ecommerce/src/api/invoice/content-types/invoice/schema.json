@@ -32,9 +32,10 @@
     "pdf": {
       "type": "media",
       "multiple": false,
-      "required": true,
+      "required": false,
       "allowedTypes": ["files"]
-    },
+    }
+  },
     "order": {
       "type": "relation",
       "relation": "manyToOne",
@@ -42,4 +43,3 @@
       "inversedBy": "invoices"
     }
   }
-}

@@ -101,6 +101,10 @@
       "target": "plugin::users-permissions.user",
       "inversedBy": "orders"
     },
+    "invoiceGenerated": {
+      "type": "boolean",
+      "default": false
+    },
     "invoices": {
       "type": "relation",
       "relation": "oneToMany",
