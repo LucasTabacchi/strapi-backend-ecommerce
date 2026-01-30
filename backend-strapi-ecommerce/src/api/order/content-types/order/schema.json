@@ -27,18 +27,27 @@
       "type": "decimal",
       "required": true
     },
+
+    "shippingMethod": {
+      "type": "enumeration",
+      "required": true,
+      "default": "delivery",
+      "enum": ["delivery", "pickup"]
+    },
+    "shippingCost": {
+      "type": "decimal",
+      "required": true,
+      "default": 0
+    },
+    "pickupPoint": {
+      "type": "string"
+    },
+
     "orderStatus": {
       "type": "enumeration",
       "required": true,
       "default": "pending",
-      "enum": [
-        "pending",
-        "paid",
-        "failed",
-        "cancelled",
-        "shipped",
-        "delivered"
-      ]
+      "enum": ["pending", "paid", "failed", "cancelled", "shipped", "delivered"]
     },
     "orderNumber": {
       "type": "string",
