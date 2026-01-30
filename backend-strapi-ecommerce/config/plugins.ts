@@ -1,3 +1,4 @@
+// config/plugins.js
 module.exports = ({ env }) => ({
   upload: {
     config: {
@@ -19,12 +20,12 @@ module.exports = ({ env }) => ({
     config: {
       providers: {
         google: {
-          // Strapi toma estas env vars
           clientId: env("GOOGLE_CLIENT_ID"),
           clientSecret: env("GOOGLE_CLIENT_SECRET"),
 
-          // ✅ A dónde vuelve Strapi DESPUÉS de Google (tu front)
-          redirectUri: env(
+          // ✅ IMPORTANTE: la key correcta es "redirect"
+          // Es a dónde vuelve Strapi DESPUÉS de Google (tu front)
+          redirect: env(
             "GOOGLE_REDIRECT_URL",
             "http://localhost:3000/connect/google/redirect"
           ),
