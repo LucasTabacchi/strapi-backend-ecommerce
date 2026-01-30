@@ -74,6 +74,10 @@
       "relation": "oneToMany",
       "target": "api::order.order",
       "mappedBy": "user"
+    },
+    "dni": {
+      "type": "string",
+      "required": false
     }
   }
 }
