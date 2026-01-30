@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "complaints",
+  "info": {
+    "singularName": "complaint",
+    "pluralName": "complaints",
+    "displayName": "Complaint",
+    "description": "Libro de quejas online"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "motivo": {
+      "type": "enumeration",
+      "enum": [
+        "Agradecimiento",
+        "Queja",
+        "Reclamo",
+        "Sugerencia",
+        "Arrepentimiento de compra"
+      ],
+      "required": true
+    },
+    "nombre": {
+      "type": "string",
+      "required": true,
+      "minLength": 2,
+      "maxLength": 60
+    },
+    "apellido": {
+      "type": "string",
+      "required": true,
+      "minLength": 2,
+      "maxLength": 60
+    },
+    "dni": {
+      "type": "string",
+      "required": true,
+      "minLength": 7,
+      "maxLength": 12
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "telefono": {
+      "type": "string",
+      "required": true,
+      "minLength": 6,
+      "maxLength": 25
+    },
+    "mensaje": {
+      "type": "text",
+      "required": true,
+      "minLength": 5
+    }
+  }
+}
