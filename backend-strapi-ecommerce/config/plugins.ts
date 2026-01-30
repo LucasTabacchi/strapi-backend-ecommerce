@@ -1,4 +1,3 @@
-// config/plugins.js
 module.exports = ({ env }) => ({
   upload: {
     config: {
@@ -15,7 +14,6 @@ module.exports = ({ env }) => ({
     },
   },
 
-  // ✅ Google OAuth (Users & Permissions)
   "users-permissions": {
     config: {
       providers: {
@@ -23,12 +21,9 @@ module.exports = ({ env }) => ({
           clientId: env("GOOGLE_CLIENT_ID"),
           clientSecret: env("GOOGLE_CLIENT_SECRET"),
 
-          // ✅ IMPORTANTE: la key correcta es "redirect"
-          // Es a dónde vuelve Strapi DESPUÉS de Google (tu front)
-          redirect: env(
-            "GOOGLE_REDIRECT_URL",
-            "http://localhost:3000/connect/google/redirect"
-          ),
+          // ✅ REDIRECT final hacia tu FRONT
+          // IMPORTANTE: setear GOOGLE_REDIRECT_URL en Render
+          redirectUri: env("GOOGLE_REDIRECT_URL"),
         },
       },
     },
