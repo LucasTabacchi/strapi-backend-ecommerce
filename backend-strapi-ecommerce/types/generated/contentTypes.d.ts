@@ -590,6 +590,43 @@ export interface ApiHomePageHomePage extends Struct.SingleTypeSchema {
   };
 }
 
+export interface ApiInvoiceInvoice extends Struct.CollectionTypeSchema {
+  collectionName: 'invoices';
+  info: {
+    displayName: 'Invoice';
+    pluralName: 'invoices';
+    singularName: 'invoice';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    currency: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'ARS'>;
+    issuedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::invoice.invoice'
+    > &
+      Schema.Attribute.Private;
+    number: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    order: Schema.Attribute.Relation<'manyToOne', 'api::order.order'>;
+    pdf: Schema.Attribute.Media<'files'> & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    total: Schema.Attribute.Decimal & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
   collectionName: 'orders';
   info: {
@@ -613,6 +650,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
         minLength: 7;
       }>;
     email: Schema.Attribute.Email & Schema.Attribute.Required;
+    invoices: Schema.Attribute.Relation<'oneToMany', 'api::invoice.invoice'>;
     items: Schema.Attribute.JSON & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
@@ -630,8 +668,15 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'pending'>;
     phone: Schema.Attribute.String;
+    pickupPoint: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     shippingAddress: Schema.Attribute.JSON;
+    shippingCost: Schema.Attribute.Decimal &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<0>;
+    shippingMethod: Schema.Attribute.Enumeration<['delivery', 'pickup']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'delivery'>;
     stockAdjusted: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     subtotal: Schema.Attribute.Decimal;
     total: Schema.Attribute.Decimal & Schema.Attribute.Required;
@@ -1314,6 +1359,7 @@ declare module '@strapi/strapi' {
       'api::address.address': ApiAddressAddress;
       'api::complaint.complaint': ApiComplaintComplaint;
       'api::home-page.home-page': ApiHomePageHomePage;
+      'api::invoice.invoice': ApiInvoiceInvoice;
       'api::order.order': ApiOrderOrder;
       'api::product.product': ApiProductProduct;
       'api::promotion.promotion': ApiPromotionPromotion;
