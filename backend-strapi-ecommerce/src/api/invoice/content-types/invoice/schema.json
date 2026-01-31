@@ -34,8 +34,7 @@
       "multiple": false,
       "required": false,
       "allowedTypes": ["files"]
-    }
-  },
+    },
     "order": {
       "type": "relation",
       "relation": "manyToOne",
@@ -43,3 +42,4 @@
       "inversedBy": "invoices"
     }
   }
+}
