@@ -1,3 +1,4 @@
+// config/plugins.ts
 module.exports = ({ env }) => ({
   upload: {
     config: {
@@ -26,6 +27,18 @@ module.exports = ({ env }) => ({
           redirectUri: env("GOOGLE_REDIRECT_URL"),
         },
       },
+    },
+  },
+
+  // ✅ GraphQL
+  graphql: {
+    enabled: true,
+    config: {
+      endpoint: "/graphql",
+      shadowCRUD: true,
+      playgroundAlways: true, // útil en dev (en prod también si querés)
+      depthLimit: 10,
+      amountLimit: 200,
     },
   },
 });
