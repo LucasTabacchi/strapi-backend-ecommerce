@@ -1,0 +1,51 @@
+services:
+  strapi:
+    build: .
+    ports:
+      - "1337:1337"
+
+    # lee variables desde tu .env (Supabase + secrets)
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 1337
+
+      # ✅ Strapi secrets (OBLIGATORIOS en v5)
+      APP_KEYS: ${APP_KEYS:?APP_KEYS is required (comma-separated list of 4 keys)}
+      API_TOKEN_SALT: ${API_TOKEN_SALT:?API_TOKEN_SALT is required}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:?ADMIN_JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+
+      # (opcionales/según tu proyecto)
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+
+      # ✅ GraphQL
+      STRAPI_GRAPHQL_ENDPOINT: ${STRAPI_GRAPHQL_ENDPOINT:-/graphql}
+
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+
+      # Public URL
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:1337}
+
+      # ✅ Postgres (Supabase) -> TODO viene del .env
+      # NO hardcodeamos PGHOST/PGPORT acá, porque Supabase usa SSL y host real
+
+      DATABASE_SSL: ${DATABASE_SSL:-true}
+      DATABASE_POOL_MIN: ${DATABASE_POOL_MIN:-0}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-2}
+      DATABASE_POOL_ACQUIRE_TIMEOUT: ${DATABASE_POOL_ACQUIRE_TIMEOUT:-120000}
+
+      # Cloudinary (opcional)
+      CLOUDINARY_NAME: ${CLOUDINARY_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+
+      # Google OAuth (opcional)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-}
