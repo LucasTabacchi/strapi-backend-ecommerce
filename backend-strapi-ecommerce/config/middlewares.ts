@@ -1,3 +1,4 @@
+// config/middlewares.ts
 export default ({ env }) => [
   "strapi::errors",
   "strapi::security",
@@ -5,8 +6,8 @@ export default ({ env }) => [
     name: "strapi::cors",
     config: {
       origin: env.array("CORS_ORIGINS", ["http://localhost:3000"]),
-      methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-      headers: ["Content-Type","Authorization"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      headers: ["Content-Type", "Authorization"],
       credentials: true,
     },
   },
@@ -14,7 +15,20 @@ export default ({ env }) => [
   "strapi::logger",
   "strapi::query",
   "strapi::body",
-  "strapi::session",
+
+  {
+    name: "strapi::session",
+    config: {
+      proxy: true,
+      cookie: {
+        // ✅ local: false (HTTP)
+        // ✅ prod: true (HTTPS)
+        secure: env.bool("COOKIE_SECURE", false),
+        sameSite: env.bool("COOKIE_SECURE", false) ? "none" : "lax",
+      },
+    },
+  },
+
   "strapi::favicon",
   "strapi::public",
 ];

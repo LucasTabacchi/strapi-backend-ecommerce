@@ -4,6 +4,8 @@ services:
     ports:
       - "1337:1337"
 
+    restart: unless-stopped
+
     # lee variables desde tu .env (Supabase + secrets)
     env_file:
       - .env
@@ -26,15 +28,15 @@ services:
       # ✅ GraphQL
       STRAPI_GRAPHQL_ENDPOINT: ${STRAPI_GRAPHQL_ENDPOINT:-/graphql}
 
-      # CORS
+      # ✅ CORS (poné acá tu ngrok + localhost separados por coma)
+      # Ej: CORS_ORIGINS=https://tu-front.ngrok-free.app,http://localhost:3000
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
 
-      # Public URL
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:1337}
+      # ✅ Public URL (OBLIGATORIA cuando usás túnel)
+      # En tu caso: https://jill-macintosh-immediately-latina.trycloudflare.com
+      PUBLIC_URL: ${PUBLIC_URL:-}
 
-      # ✅ Postgres (Supabase) -> TODO viene del .env
-      # NO hardcodeamos PGHOST/PGPORT acá, porque Supabase usa SSL y host real
-
+      # ✅ Postgres (Supabase) -> viene del .env
       DATABASE_SSL: ${DATABASE_SSL:-true}
       DATABASE_POOL_MIN: ${DATABASE_POOL_MIN:-0}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-2}
@@ -49,3 +51,10 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-}
+
+    # (Opcional pero recomendado)
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:1337/admin', r=>process.exit(r.statusCode<500?0:1)).on('error', ()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5

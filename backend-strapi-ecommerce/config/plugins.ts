@@ -1,5 +1,5 @@
 // config/plugins.ts
-module.exports = ({ env }) => ({
+export default ({ env }) => ({
   upload: {
     config: {
       provider: "cloudinary",
