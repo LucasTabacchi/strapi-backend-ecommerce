@@ -22,7 +22,15 @@
     },
     "name": {
       "type": "string"
-    }, 
+    },
+    "firstName": {
+      "type": "string",
+      "required": false
+    },
+    "lastName": {
+      "type": "string",
+      "required": false
+    },
     "email": {
       "type": "email",
       "minLength": 6,
