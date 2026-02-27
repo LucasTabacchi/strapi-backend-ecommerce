@@ -618,7 +618,7 @@ export interface ApiInvoiceInvoice extends Struct.CollectionTypeSchema {
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
     order: Schema.Attribute.Relation<'manyToOne', 'api::order.order'>;
-    pdf: Schema.Attribute.Media<'files'> & Schema.Attribute.Required;
+    pdf: Schema.Attribute.Media<'files'>;
     publishedAt: Schema.Attribute.DateTime;
     total: Schema.Attribute.Decimal & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
@@ -650,6 +650,8 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
         minLength: 7;
       }>;
     email: Schema.Attribute.Email & Schema.Attribute.Required;
+    invoiceGenerated: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
     invoices: Schema.Attribute.Relation<'oneToMany', 'api::invoice.invoice'>;
     items: Schema.Attribute.JSON & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1313,6 +1315,8 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    firstName: Schema.Attribute.String;
+    lastName: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',

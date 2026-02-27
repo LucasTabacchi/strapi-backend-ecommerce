@@ -21,10 +21,8 @@ export default ({ env }) => ({
         google: {
           clientId: env("GOOGLE_CLIENT_ID"),
           clientSecret: env("GOOGLE_CLIENT_SECRET"),
-
-          // ✅ REDIRECT final hacia tu FRONT
-          // IMPORTANTE: setear GOOGLE_REDIRECT_URL en Render
           redirectUri: env("GOOGLE_REDIRECT_URL"),
+          scope: ["email", "profile"],
         },
       },
     },
