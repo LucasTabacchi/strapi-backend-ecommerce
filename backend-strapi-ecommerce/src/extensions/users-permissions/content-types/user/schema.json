@@ -86,6 +86,11 @@
     "dni": {
       "type": "string",
       "required": false
+    },
+    "isStoreAdmin": {
+      "type": "boolean",
+      "default": false,
+      "required": false
     }
   }
 }
