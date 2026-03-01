@@ -92,6 +92,14 @@
       "type": "boolean",
       "default": false,
       "required": false
+    },
+    "claimedCoupons": {
+      "type": "json",
+      "required": false
+    },
+    "cartItems": {
+      "type": "json",
+      "required": false
     }
   }
 }
