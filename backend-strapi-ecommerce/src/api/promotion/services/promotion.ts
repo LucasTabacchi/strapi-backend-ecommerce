@@ -56,6 +56,46 @@ function normStr(s: any) {
 function lower(s: any) {
   return normStr(s).toLowerCase();
 }
+
+function readStringList(input: any): string[] {
+  if (Array.isArray(input)) {
+    return input.map(normStr).filter(Boolean);
+  }
+
+  if (typeof input === "string") {
+    const raw = input.trim();
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map(normStr).filter(Boolean);
+      }
+    } catch {
+      // Ignore JSON parse errors and fallback to splitter.
+    }
+
+    return raw
+      .split(/[;,|]/g)
+      .map(normStr)
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function categoryTokens(category: any): string[] {
+  const raw = normStr(category);
+  if (!raw) return [];
+
+  const parts = raw
+    .split(/[;,|]/g)
+    .map(lower)
+    .filter(Boolean);
+
+  if (!parts.length) return [lower(raw)];
+  return Array.from(new Set(parts));
+}
 function uniqNums(input: any[]) {
   const out = new Set<number>();
   for (const raw of input) {
@@ -72,7 +112,7 @@ function priceWithOff(price: number, off?: number) {
 
 function getPromoScopeLabel(p: any) {
   const appliesTo = normStr(p?.appliesTo) || "order";
-  const categories = asArray<string>(p?.categories).map(normStr).filter(Boolean);
+  const categories = readStringList(p?.categories);
   const productIds = uniqNums(asArray<number>(p?.productIds));
 
   if (appliesTo === "product") {
@@ -121,19 +161,23 @@ function allocateByProportion(lines: QuoteLine[], amount: number) {
 
 function computeEligibleLines(lines: QuoteLine[], p: any) {
   const appliesTo = normStr(p?.appliesTo) || "order";
-  const categories = asArray<string>(p?.categories).map(normStr).filter(Boolean);
-  const excludedCategories = asArray<string>(p?.excludedCategories).map(normStr).filter(Boolean);
+  const categories = readStringList(p?.categories);
+  const excludedCategories = readStringList(p?.excludedCategories);
   const productIds = uniqNums(asArray<number>(p?.productIds));
   const excludedProductIds = uniqNums(asArray<number>(p?.excludedProductIds));
+  const wantedCategories = new Set(categories.map(lower));
+  const blockedCategories = new Set(excludedCategories.map(lower));
 
   return lines.filter((l) => {
+    const lineCategoryTokens = categoryTokens(l.category);
+
     if (excludedProductIds.includes(l.id)) return false;
-    if (excludedCategories.map(lower).includes(lower(l.category))) return false;
+    if (lineCategoryTokens.some((t) => blockedCategories.has(t))) return false;
 
     if (appliesTo === "order") return true;
     if (appliesTo === "category") {
-      if (!categories.length) return false;
-      return categories.map(lower).includes(lower(l.category));
+      if (!wantedCategories.size) return false;
+      return lineCategoryTokens.some((t) => wantedCategories.has(t));
     }
     if (appliesTo === "product") {
       if (!productIds.length) return false;
