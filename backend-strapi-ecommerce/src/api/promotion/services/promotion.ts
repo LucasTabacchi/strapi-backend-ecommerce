@@ -1,6 +1,11 @@
 import { factories } from "@strapi/strapi";
 
-type CartItemInput = { id?: number | null; documentId?: string | null; qty?: number | null };
+type CartItemInput = {
+  id?: number | null;
+  documentId?: string | null;
+  slug?: string | null;
+  qty?: number | null;
+};
 type QuoteInput = { items?: CartItemInput[]; coupon?: string | null; shipping?: number | null };
 type QuoteReasonCode =
   | "EMPTY_CART"
@@ -311,14 +316,16 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       .map((it) => {
         const id = Number(it?.id);
         const documentId = normStr(it?.documentId) || null;
+        const slug = normStr(it?.slug) || null;
         const qty = Math.max(1, Math.floor(Number(it?.qty ?? 1) || 1));
         return {
           id: Number.isFinite(id) && id > 0 ? id : null,
           documentId,
+          slug,
           qty,
         };
       })
-      .filter((it) => it.id != null || !!it.documentId);
+      .filter((it) => it.id != null || !!it.documentId || !!it.slug);
 
     if (!rawItems.length) {
       return {
@@ -348,10 +355,12 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
     const docIds = Array.from(
       new Set(rawItems.map((x) => normStr(x.documentId)).filter(Boolean))
     );
+    const slugs = Array.from(new Set(rawItems.map((x) => normStr(x.slug)).filter(Boolean)));
 
     const whereOr: any[] = [];
     if (ids.length) whereOr.push({ id: { $in: ids } });
     if (docIds.length) whereOr.push({ documentId: { $in: docIds } });
+    if (slugs.length) whereOr.push({ slug: { $in: slugs } });
 
     const products = await strapi.db.query("api::product.product").findMany({
       where: whereOr.length ? { $or: whereOr } : {},
@@ -361,30 +370,35 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
 
     const byId = new Map<number, any>();
     const byDoc = new Map<string, any>();
+    const bySlug = new Map<string, any>();
     for (const p of asArray(products)) {
       if (p?.id) byId.set(p.id, p);
       const did = normStr(p?.documentId ?? p?.document_id);
       if (did) byDoc.set(did, p);
+      const slug = normStr(p?.slug);
+      if (slug) bySlug.set(slug, p);
     }
 
     const lines = rawItems
       .map((it) => {
         const p =
           (it.id != null ? byId.get(it.id) : null) ||
-          (it.documentId ? byDoc.get(normStr(it.documentId)) : null);
+          (it.documentId ? byDoc.get(normStr(it.documentId)) : null) ||
+          (it.slug ? bySlug.get(normStr(it.slug)) : null);
         if (!p) return null;
 
         const offRaw = num(p?.off, 0);
         const unit = priceWithOff(num(p?.price, 0), offRaw);
         const documentId = normStr(p?.documentId ?? p?.document_id) || null;
-        const key = documentId ? `doc:${documentId}` : `id:${p.id}`;
+        const slug = normStr(p?.slug) || null;
+        const key = documentId ? `doc:${documentId}` : p?.id ? `id:${p.id}` : `slug:${slug}`;
         return {
           key,
           id: p.id,
           documentId,
           qty: it.qty,
           title: normStr(p?.title) || "Producto",
-          slug: normStr(p?.slug) || null,
+          slug,
           category: normStr(p?.category),
           unit,
           lineSubtotal: Math.round(unit * it.qty),

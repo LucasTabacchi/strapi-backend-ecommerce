@@ -51,10 +51,14 @@ function buildQuoteItems(items: any[]) {
     .map((it) => ({
       id: Number(it?.productId ?? it?.id),
       documentId: normStr(it?.productDocumentId ?? it?.documentId) || null,
+      slug: normStr(it?.slug) || null,
       qty: Math.max(1, Math.floor(Number(it?.qty ?? it?.quantity ?? 1))),
     }))
     .filter(
-      (it) => ((Number.isFinite(it.id) && it.id > 0) || !!it.documentId) && Number.isFinite(it.qty) && it.qty > 0
+      (it) =>
+        ((Number.isFinite(it.id) && it.id > 0) || !!it.documentId || !!it.slug) &&
+        Number.isFinite(it.qty) &&
+        it.qty > 0
     );
 }
 
@@ -88,7 +92,7 @@ export default factories.createCoreController("api::order.order", ({ strapi }) =
 
     const quoteItems = buildQuoteItems(data.items);
     if (!quoteItems.length) {
-      throw new ValidationError("Los items no tienen productId/documentId válidos.");
+      throw new ValidationError("Los items no tienen productId/documentId/slug válidos.");
     }
 
     const couponRequested = normStr(incoming?.coupon) || null;
