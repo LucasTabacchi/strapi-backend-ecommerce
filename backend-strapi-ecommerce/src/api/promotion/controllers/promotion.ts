@@ -154,16 +154,13 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
     }
 
     const nowIso = new Date().toISOString();
+    const nowMs = Date.now();
     const data = asArray(
       await strapi.entityService.findMany("api::promotion.promotion", {
         status: "published" as any,
         filters: {
           enabled: true,
           requiresCoupon: true,
-          $and: [
-            { $or: [{ startAt: null }, { startAt: { $lte: nowIso } }] },
-            { $or: [{ endAt: null }, { endAt: { $gte: nowIso } }] },
-          ],
         },
         sort: [{ priority: "asc" }, { id: "asc" }],
         pagination: { pageSize: 200 },
@@ -175,6 +172,13 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
         const usageLimitTotal = p?.usageLimitTotal == null ? null : num(p.usageLimitTotal, 0);
         const usedCount = num(p?.usedCount, 0);
         const exhausted = usageLimitTotal != null && usageLimitTotal > 0 && usedCount >= usageLimitTotal;
+        const startAt = p.startAt ?? null;
+        const endAt = p.endAt ?? null;
+        const startMs = startAt ? Date.parse(String(startAt)) : NaN;
+        const endMs = endAt ? Date.parse(String(endAt)) : NaN;
+        const isNotStarted = Number.isFinite(startMs) ? startMs > nowMs : false;
+        const isExpired = Number.isFinite(endMs) ? endMs < nowMs : false;
+        const isAvailable = !exhausted && !isNotStarted && !isExpired;
         return {
           id: p.id,
           name: p.name,
@@ -191,21 +195,24 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
           productIds: uniqNums(asArray<number>(p.productIds)),
           combinable: !!p.combinable,
           priority: num(p.priority, 100),
-          startAt: p.startAt ?? null,
-          endAt: p.endAt ?? null,
+          startAt,
+          endAt,
           scopeLabel: scopeLabel(p),
           usageLimitTotal,
           usedCount,
           exhausted,
+          isNotStarted,
+          isExpired,
+          isAvailable,
         };
-      })
-      .filter((p) => !p.exhausted);
+      });
 
     ctx.status = 200;
     ctx.body = {
       data: mapped,
       meta: {
         userId: user.id,
+        now: nowIso,
       },
     };
   },
