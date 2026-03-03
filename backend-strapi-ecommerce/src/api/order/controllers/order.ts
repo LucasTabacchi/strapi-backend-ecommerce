@@ -24,6 +24,14 @@ function getOwnerId(maybeUser: any) {
   return null;
 }
 
+function isStoreAdmin(user: any) {
+  return (
+    user?.isStoreAdmin === true ||
+    user?.isStoreAdmin === 1 ||
+    user?.isStoreAdmin === "true"
+  );
+}
+
 function makeOrderNumber(numericId: number | string) {
   const n = Number(numericId);
   if (!Number.isFinite(n) || n <= 0) return null;
@@ -73,6 +81,9 @@ export default factories.createCoreController("api::order.order", ({ strapi }) =
   async create(ctx) {
     const user = ctx.state.user;
     if (!user) throw new UnauthorizedError("Tenés que iniciar sesión para crear una orden.");
+    if (isStoreAdmin(user)) {
+      throw new ForbiddenError("Las cuentas tienda no pueden crear órdenes de compra.");
+    }
 
     const incoming = normalizeBodyData(ctx.request.body);
     const data = { ...incoming };
@@ -165,6 +176,9 @@ export default factories.createCoreController("api::order.order", ({ strapi }) =
   async findOne(ctx) {
     const user = ctx.state.user;
     if (!user) throw new UnauthorizedError("No autorizado.");
+    if (isStoreAdmin(user)) {
+      throw new ForbiddenError("Las cuentas tienda no usan pedidos de cliente.");
+    }
 
     const { id } = ctx.params;
 
@@ -189,6 +203,9 @@ export default factories.createCoreController("api::order.order", ({ strapi }) =
   async my(ctx) {
     const user = ctx.state.user;
     if (!user) throw new UnauthorizedError("No autorizado.");
+    if (isStoreAdmin(user)) {
+      throw new ForbiddenError("Las cuentas tienda no tienen pedidos de cliente.");
+    }
 
     const entities = await strapi.entityService.findMany("api::order.order", {
       filters: { user: user.id },
