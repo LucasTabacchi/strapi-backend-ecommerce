@@ -20,13 +20,43 @@ function uniqNums(input: any[]) {
   return Array.from(out);
 }
 
+function readProductTargets(input: any): { ids: number[]; documentIds: string[] } {
+  const ids = new Set<number>();
+  const documentIds = new Set<string>();
+
+  for (const raw of asArray<any>(input)) {
+    if (raw == null) continue;
+
+    if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
+      ids.add(Math.trunc(raw));
+      continue;
+    }
+
+    const s = normStr(raw);
+    if (!s) continue;
+
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      if (Number.isFinite(n) && n > 0) {
+        ids.add(Math.trunc(n));
+        continue;
+      }
+    }
+
+    documentIds.add(s);
+  }
+
+  return { ids: Array.from(ids), documentIds: Array.from(documentIds) };
+}
+
 function scopeLabel(p: any) {
   const appliesTo = normStr(p?.appliesTo) || "order";
   const categories = asArray<string>(p?.categories).map(normStr).filter(Boolean);
-  const productIds = uniqNums(asArray<number>(p?.productIds));
+  const productTargets = readProductTargets(p?.productIds);
+  const productTargetCount = productTargets.ids.length + productTargets.documentIds.length;
 
   if (appliesTo === "product") {
-    if (productIds.length === 1) return "Válido para 1 producto seleccionado.";
+    if (productTargetCount === 1) return "Válido para 1 producto seleccionado.";
     return "Válido para productos seleccionados.";
   }
   if (appliesTo === "category") {
@@ -116,28 +146,32 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
     );
 
     const mapped = data
-      .map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description ?? null,
-        enabled: !!p.enabled,
-        requiresCoupon: !!p.requiresCoupon,
-        code: normStr(p.code) || null,
-        discountType: normStr(p.discountType) || "percent",
-        discountValue: num(p.discountValue, 0),
-        minSubtotal: p.minSubtotal == null ? null : num(p.minSubtotal, 0),
-        minItems: p.minItems == null ? null : num(p.minItems, 0),
-        minBoxes: p.minBoxes == null ? null : num(p.minBoxes, 0),
-        maxDiscount: p.maxDiscount == null ? null : num(p.maxDiscount, 0),
-        appliesTo: normStr(p.appliesTo) || "order",
-        categories: asArray<string>(p.categories).map(normStr).filter(Boolean),
-        productIds: uniqNums(asArray<number>(p.productIds)),
-        combinable: !!p.combinable,
-        priority: num(p.priority, 100),
-        startAt: p.startAt ?? null,
-        endAt: p.endAt ?? null,
-        scopeLabel: scopeLabel(p),
-      }))
+      .map((p: any) => {
+        const productTargets = readProductTargets(p?.productIds);
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description ?? null,
+          enabled: !!p.enabled,
+          requiresCoupon: !!p.requiresCoupon,
+          code: normStr(p.code) || null,
+          discountType: normStr(p.discountType) || "percent",
+          discountValue: num(p.discountValue, 0),
+          minSubtotal: p.minSubtotal == null ? null : num(p.minSubtotal, 0),
+          minItems: p.minItems == null ? null : num(p.minItems, 0),
+          minBoxes: p.minBoxes == null ? null : num(p.minBoxes, 0),
+          maxDiscount: p.maxDiscount == null ? null : num(p.maxDiscount, 0),
+          appliesTo: normStr(p.appliesTo) || "order",
+          categories: asArray<string>(p.categories).map(normStr).filter(Boolean),
+          productIds: productTargets.ids,
+          productDocumentIds: productTargets.documentIds,
+          combinable: !!p.combinable,
+          priority: num(p.priority, 100),
+          startAt: p.startAt ?? null,
+          endAt: p.endAt ?? null,
+          scopeLabel: scopeLabel(p),
+        };
+      })
       .filter((p) => p.enabled);
 
     ctx.status = 200;
@@ -169,6 +203,7 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
 
     const mapped = data
       .map((p: any) => {
+        const productTargets = readProductTargets(p?.productIds);
         const usageLimitTotal = p?.usageLimitTotal == null ? null : num(p.usageLimitTotal, 0);
         const usedCount = num(p?.usedCount, 0);
         const exhausted = usageLimitTotal != null && usageLimitTotal > 0 && usedCount >= usageLimitTotal;
@@ -192,7 +227,8 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
           maxDiscount: p.maxDiscount == null ? null : num(p.maxDiscount, 0),
           appliesTo: normStr(p.appliesTo) || "order",
           categories: asArray<string>(p.categories).map(normStr).filter(Boolean),
-          productIds: uniqNums(asArray<number>(p.productIds)),
+          productIds: productTargets.ids,
+          productDocumentIds: productTargets.documentIds,
           combinable: !!p.combinable,
           priority: num(p.priority, 100),
           startAt,

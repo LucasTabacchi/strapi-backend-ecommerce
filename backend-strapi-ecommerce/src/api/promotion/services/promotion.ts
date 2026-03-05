@@ -110,6 +110,35 @@ function uniqNums(input: any[]) {
   return Array.from(out);
 }
 
+function readProductTargets(input: any): { ids: number[]; documentIds: string[] } {
+  const ids = new Set<number>();
+  const documentIds = new Set<string>();
+
+  for (const raw of asArray<any>(input)) {
+    if (raw == null) continue;
+
+    if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
+      ids.add(Math.trunc(raw));
+      continue;
+    }
+
+    const s = normStr(raw);
+    if (!s) continue;
+
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      if (Number.isFinite(n) && n > 0) {
+        ids.add(Math.trunc(n));
+        continue;
+      }
+    }
+
+    documentIds.add(lower(s));
+  }
+
+  return { ids: Array.from(ids), documentIds: Array.from(documentIds) };
+}
+
 function priceWithOff(price: number, off?: number) {
   const hasOff = typeof off === "number" && off > 0;
   return hasOff ? Math.round(price * (1 - off / 100)) : price;
@@ -118,11 +147,12 @@ function priceWithOff(price: number, off?: number) {
 function getPromoScopeLabel(p: any) {
   const appliesTo = normStr(p?.appliesTo) || "order";
   const categories = readStringList(p?.categories);
-  const productIds = uniqNums(asArray<number>(p?.productIds));
+  const productTargets = readProductTargets(p?.productIds);
+  const productTargetCount = productTargets.ids.length + productTargets.documentIds.length;
 
   if (appliesTo === "product") {
-    if (productIds.length === 1) return "Válido para 1 producto seleccionado.";
-    if (productIds.length > 1) return "Válido para productos seleccionados.";
+    if (productTargetCount === 1) return "Válido para 1 producto seleccionado.";
+    if (productTargetCount > 1) return "Válido para productos seleccionados.";
     return "Válido para productos seleccionados.";
   }
   if (appliesTo === "category") {
@@ -168,15 +198,21 @@ function computeEligibleLines(lines: QuoteLine[], p: any) {
   const appliesTo = normStr(p?.appliesTo) || "order";
   const categories = readStringList(p?.categories);
   const excludedCategories = readStringList(p?.excludedCategories);
-  const productIds = uniqNums(asArray<number>(p?.productIds));
-  const excludedProductIds = uniqNums(asArray<number>(p?.excludedProductIds));
+  const productTargets = readProductTargets(p?.productIds);
+  const excludedProductTargets = readProductTargets(p?.excludedProductIds);
   const wantedCategories = new Set(categories.map(lower));
   const blockedCategories = new Set(excludedCategories.map(lower));
+  const wantedProductIds = new Set(productTargets.ids);
+  const wantedProductDocumentIds = new Set(productTargets.documentIds);
+  const excludedProductIds = new Set(excludedProductTargets.ids);
+  const excludedProductDocumentIds = new Set(excludedProductTargets.documentIds);
 
   return lines.filter((l) => {
     const lineCategoryTokens = categoryTokens(l.category);
+    const lineDocumentId = l.documentId ? lower(l.documentId) : "";
 
-    if (excludedProductIds.includes(l.id)) return false;
+    if (excludedProductIds.has(l.id)) return false;
+    if (lineDocumentId && excludedProductDocumentIds.has(lineDocumentId)) return false;
     if (lineCategoryTokens.some((t) => blockedCategories.has(t))) return false;
 
     if (appliesTo === "order") return true;
@@ -185,8 +221,10 @@ function computeEligibleLines(lines: QuoteLine[], p: any) {
       return lineCategoryTokens.some((t) => wantedCategories.has(t));
     }
     if (appliesTo === "product") {
-      if (!productIds.length) return false;
-      return productIds.includes(l.id);
+      if (!wantedProductIds.size && !wantedProductDocumentIds.size) return false;
+      if (wantedProductIds.has(l.id)) return true;
+      if (lineDocumentId && wantedProductDocumentIds.has(lineDocumentId)) return true;
+      return false;
     }
     return true;
   });
