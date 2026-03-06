@@ -1,69 +1,8 @@
 // backend/src/api/promotion/controllers/promotion.ts
 import { factories } from "@strapi/strapi";
 
-function asArray<T = any>(v: any): T[] {
-  return Array.isArray(v) ? v : [];
-}
 function normStr(v: any) {
   return String(v ?? "").trim();
-}
-function num(v: any, def = 0) {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : def;
-}
-function uniqNums(input: any[]) {
-  const out = new Set<number>();
-  for (const raw of input) {
-    const n = Number(raw);
-    if (Number.isFinite(n) && n > 0) out.add(Math.trunc(n));
-  }
-  return Array.from(out);
-}
-
-function readProductTargets(input: any): { ids: number[]; documentIds: string[] } {
-  const ids = new Set<number>();
-  const documentIds = new Set<string>();
-
-  for (const raw of asArray<any>(input)) {
-    if (raw == null) continue;
-
-    if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
-      ids.add(Math.trunc(raw));
-      continue;
-    }
-
-    const s = normStr(raw);
-    if (!s) continue;
-
-    if (/^\d+$/.test(s)) {
-      const n = Number(s);
-      if (Number.isFinite(n) && n > 0) {
-        ids.add(Math.trunc(n));
-        continue;
-      }
-    }
-
-    documentIds.add(s);
-  }
-
-  return { ids: Array.from(ids), documentIds: Array.from(documentIds) };
-}
-
-function scopeLabel(p: any) {
-  const appliesTo = normStr(p?.appliesTo) || "order";
-  const categories = asArray<string>(p?.categories).map(normStr).filter(Boolean);
-  const productTargets = readProductTargets(p?.productIds);
-  const productTargetCount = productTargets.ids.length + productTargets.documentIds.length;
-
-  if (appliesTo === "product") {
-    if (productTargetCount === 1) return "Válido para 1 producto seleccionado.";
-    return "Válido para productos seleccionados.";
-  }
-  if (appliesTo === "category") {
-    if (categories.length === 1) return `Válido para la categoría "${categories[0]}".`;
-    return "Válido para categorías seleccionadas.";
-  }
-  return "Válido para toda la compra.";
 }
 
 export default factories.createCoreController("api::promotion.promotion", ({ strapi }) => ({
@@ -129,50 +68,9 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
 
   // GET /api/promotions/available
   async available(ctx) {
-    const nowIso = new Date().toISOString();
-    const data = asArray(
-      await strapi.entityService.findMany("api::promotion.promotion", {
-        status: "published" as any,
-        filters: {
-          enabled: true,
-          $and: [
-            { $or: [{ startAt: null }, { startAt: { $lte: nowIso } }] },
-            { $or: [{ endAt: null }, { endAt: { $gte: nowIso } }] },
-          ],
-        },
-        sort: [{ priority: "asc" }, { id: "asc" }],
-        pagination: { pageSize: 200 },
-      })
-    );
-
-    const mapped = data
-      .map((p: any) => {
-        const productTargets = readProductTargets(p?.productIds);
-        return {
-          id: p.id,
-          name: p.name,
-          description: p.description ?? null,
-          enabled: !!p.enabled,
-          requiresCoupon: !!p.requiresCoupon,
-          code: normStr(p.code) || null,
-          discountType: normStr(p.discountType) || "percent",
-          discountValue: num(p.discountValue, 0),
-          minSubtotal: p.minSubtotal == null ? null : num(p.minSubtotal, 0),
-          minItems: p.minItems == null ? null : num(p.minItems, 0),
-          minBoxes: p.minBoxes == null ? null : num(p.minBoxes, 0),
-          maxDiscount: p.maxDiscount == null ? null : num(p.maxDiscount, 0),
-          appliesTo: normStr(p.appliesTo) || "order",
-          categories: asArray<string>(p.categories).map(normStr).filter(Boolean),
-          productIds: productTargets.ids,
-          productDocumentIds: productTargets.documentIds,
-          combinable: !!p.combinable,
-          priority: num(p.priority, 100),
-          startAt: p.startAt ?? null,
-          endAt: p.endAt ?? null,
-          scopeLabel: scopeLabel(p),
-        };
-      })
-      .filter((p) => p.enabled);
+    const mapped = await strapi
+      .service("api::promotion.promotion")
+      .listAvailablePromotions();
 
     ctx.status = 200;
     ctx.body = { data: mapped };
@@ -188,60 +86,7 @@ export default factories.createCoreController("api::promotion.promotion", ({ str
     }
 
     const nowIso = new Date().toISOString();
-    const nowMs = Date.now();
-    const data = asArray(
-      await strapi.entityService.findMany("api::promotion.promotion", {
-        status: "published" as any,
-        filters: {
-          enabled: true,
-          requiresCoupon: true,
-        },
-        sort: [{ priority: "asc" }, { id: "asc" }],
-        pagination: { pageSize: 200 },
-      })
-    );
-
-    const mapped = data
-      .map((p: any) => {
-        const productTargets = readProductTargets(p?.productIds);
-        const usageLimitTotal = p?.usageLimitTotal == null ? null : num(p.usageLimitTotal, 0);
-        const usedCount = num(p?.usedCount, 0);
-        const exhausted = usageLimitTotal != null && usageLimitTotal > 0 && usedCount >= usageLimitTotal;
-        const startAt = p.startAt ?? null;
-        const endAt = p.endAt ?? null;
-        const startMs = startAt ? Date.parse(String(startAt)) : NaN;
-        const endMs = endAt ? Date.parse(String(endAt)) : NaN;
-        const isNotStarted = Number.isFinite(startMs) ? startMs > nowMs : false;
-        const isExpired = Number.isFinite(endMs) ? endMs < nowMs : false;
-        const isAvailable = !exhausted && !isNotStarted && !isExpired;
-        return {
-          id: p.id,
-          name: p.name,
-          description: p.description ?? null,
-          code: normStr(p.code) || null,
-          discountType: normStr(p.discountType) || "percent",
-          discountValue: num(p.discountValue, 0),
-          minSubtotal: p.minSubtotal == null ? null : num(p.minSubtotal, 0),
-          minItems: p.minItems == null ? null : num(p.minItems, 0),
-          minBoxes: p.minBoxes == null ? null : num(p.minBoxes, 0),
-          maxDiscount: p.maxDiscount == null ? null : num(p.maxDiscount, 0),
-          appliesTo: normStr(p.appliesTo) || "order",
-          categories: asArray<string>(p.categories).map(normStr).filter(Boolean),
-          productIds: productTargets.ids,
-          productDocumentIds: productTargets.documentIds,
-          combinable: !!p.combinable,
-          priority: num(p.priority, 100),
-          startAt,
-          endAt,
-          scopeLabel: scopeLabel(p),
-          usageLimitTotal,
-          usedCount,
-          exhausted,
-          isNotStarted,
-          isExpired,
-          isAvailable,
-        };
-      });
+    const mapped = await strapi.service("api::promotion.promotion").listMyCoupons();
 
     ctx.status = 200;
     ctx.body = {

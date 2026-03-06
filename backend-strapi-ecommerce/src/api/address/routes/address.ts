@@ -6,6 +6,7 @@ export default {
       path: "/addresses",
       handler: "address.find",
       config: {
+        auth: { scope: ["api::address.address.find"] },
         policies: [],
       },
     },
@@ -16,6 +17,7 @@ export default {
       path: "/addresses",
       handler: "address.create",
       config: {
+        auth: { scope: ["api::address.address.create"] },
         policies: [],
       },
     },
@@ -26,6 +28,7 @@ export default {
       path: "/addresses/:id",
       handler: "address.findOne",
       config: {
+        auth: { scope: ["api::address.address.findOne"] },
         policies: ["api::address.is-owner"],
       },
     },
@@ -36,6 +39,7 @@ export default {
       path: "/addresses/:id",
       handler: "address.update",
       config: {
+        auth: { scope: ["api::address.address.update"] },
         policies: ["api::address.is-owner"],
       },
     },
@@ -46,6 +50,7 @@ export default {
       path: "/addresses/:id",
       handler: "address.delete",
       config: {
+        auth: { scope: ["api::address.address.delete"] },
         policies: ["api::address.is-owner"],
       },
     },

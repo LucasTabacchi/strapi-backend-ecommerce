@@ -9,14 +9,7 @@ export default async (policyContext: any, _config: any, { strapi }: { strapi: Co
   const documentId = ctx.params?.id;
   if (!documentId) return false;
 
-  const ownerFilter = user?.email
-    ? {
-        $or: [
-          { user: { id: { $eq: user.id } } },
-          { user: { email: { $eqi: user.email } } },
-        ],
-      }
-    : { user: { id: { $eq: user.id } } };
+  const ownerFilter = { user: { id: { $eq: user.id } } };
 
   // Buscamos la address por documentId y user id
   const results = await strapi.documents("api::address.address").findMany({

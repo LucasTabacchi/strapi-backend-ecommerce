@@ -1,5 +1,13 @@
 import { factories } from "@strapi/strapi";
 
+import {
+  lower,
+  normStr,
+  readProductTargets,
+  readStringList,
+  uniqNums,
+} from "../utils/promotion-targets";
+
 type CartItemInput = {
   id?: number | null;
   documentId?: string | null;
@@ -48,45 +56,15 @@ type EvaluatedPromotion = {
   };
 };
 
+const PRODUCT_UID = "api::product.product";
+const PROMOTION_UID = "api::promotion.promotion";
+
 function asArray<T = any>(v: any): T[] {
   return Array.isArray(v) ? v : [];
 }
 function num(v: any, def = 0) {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : def;
-}
-function normStr(s: any) {
-  return String(s ?? "").trim();
-}
-function lower(s: any) {
-  return normStr(s).toLowerCase();
-}
-
-function readStringList(input: any): string[] {
-  if (Array.isArray(input)) {
-    return input.map(normStr).filter(Boolean);
-  }
-
-  if (typeof input === "string") {
-    const raw = input.trim();
-    if (!raw) return [];
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map(normStr).filter(Boolean);
-      }
-    } catch {
-      // Ignore JSON parse errors and fallback to splitter.
-    }
-
-    return raw
-      .split(/[;,|]/g)
-      .map(normStr)
-      .filter(Boolean);
-  }
-
-  return [];
 }
 
 function categoryTokens(category: any): string[] {
@@ -100,43 +78,6 @@ function categoryTokens(category: any): string[] {
 
   if (!parts.length) return [lower(raw)];
   return Array.from(new Set(parts));
-}
-function uniqNums(input: any[]) {
-  const out = new Set<number>();
-  for (const raw of input) {
-    const n = Number(raw);
-    if (Number.isFinite(n) && n > 0) out.add(Math.trunc(n));
-  }
-  return Array.from(out);
-}
-
-function readProductTargets(input: any): { ids: number[]; documentIds: string[] } {
-  const ids = new Set<number>();
-  const documentIds = new Set<string>();
-
-  for (const raw of asArray<any>(input)) {
-    if (raw == null) continue;
-
-    if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
-      ids.add(Math.trunc(raw));
-      continue;
-    }
-
-    const s = normStr(raw);
-    if (!s) continue;
-
-    if (/^\d+$/.test(s)) {
-      const n = Number(s);
-      if (Number.isFinite(n) && n > 0) {
-        ids.add(Math.trunc(n));
-        continue;
-      }
-    }
-
-    documentIds.add(lower(s));
-  }
-
-  return { ids: Array.from(ids), documentIds: Array.from(documentIds) };
 }
 
 function priceWithOff(price: number, off?: number) {
@@ -161,6 +102,73 @@ function getPromoScopeLabel(p: any) {
     return "Válido para categorías seleccionadas.";
   }
   return "Válido para toda la compra.";
+}
+
+function buildActivePromotionFilters(nowIso: string) {
+  return {
+    enabled: true,
+    $and: [
+      { $or: [{ startAt: null }, { startAt: { $lte: nowIso } }] },
+      { $or: [{ endAt: null }, { endAt: { $gte: nowIso } }] },
+    ],
+  };
+}
+
+function mapPromotionSummary(p: any, nowMs?: number) {
+  const productTargets = readProductTargets(p?.productIds);
+  const usageLimitTotal =
+    p?.usageLimitTotal == null ? null : num(p.usageLimitTotal, 0);
+  const usedCount = num(p?.usedCount, 0);
+  const exhausted =
+    usageLimitTotal != null && usageLimitTotal > 0 && usedCount >= usageLimitTotal;
+  const startAt = p?.startAt ?? null;
+  const endAt = p?.endAt ?? null;
+  const startMs = startAt ? Date.parse(String(startAt)) : NaN;
+  const endMs = endAt ? Date.parse(String(endAt)) : NaN;
+  const isNotStarted = Number.isFinite(startMs) && nowMs != null ? startMs > nowMs : false;
+  const isExpired = Number.isFinite(endMs) && nowMs != null ? endMs < nowMs : false;
+  const isAvailable = !exhausted && !isNotStarted && !isExpired;
+
+  return {
+    id: p?.id,
+    name: p?.name,
+    description: p?.description ?? null,
+    enabled: !!p?.enabled,
+    requiresCoupon: !!p?.requiresCoupon,
+    code: normStr(p?.code) || null,
+    discountType: normStr(p?.discountType) || "percent",
+    discountValue: num(p?.discountValue, 0),
+    minSubtotal: p?.minSubtotal == null ? null : num(p?.minSubtotal, 0),
+    minItems: p?.minItems == null ? null : num(p?.minItems, 0),
+    minBoxes: p?.minBoxes == null ? null : num(p?.minBoxes, 0),
+    maxDiscount: p?.maxDiscount == null ? null : num(p?.maxDiscount, 0),
+    appliesTo: normStr(p?.appliesTo) || "order",
+    categories: readStringList(p?.categories).map(normStr).filter(Boolean),
+    productIds: productTargets.ids,
+    productDocumentIds: productTargets.documentIds,
+    combinable: !!p?.combinable,
+    priority: num(p?.priority, 100),
+    startAt,
+    endAt,
+    scopeLabel: getPromoScopeLabel(p),
+    usageLimitTotal,
+    usedCount,
+    exhausted,
+    isNotStarted,
+    isExpired,
+    isAvailable,
+  };
+}
+
+async function fetchActivePromotions(strapi: any, nowIso: string) {
+  return asArray(
+    await strapi.documents(PROMOTION_UID).findMany({
+      status: "published" as any,
+      filters: buildActivePromotionFilters(nowIso),
+      sort: [{ priority: "asc" }, { id: "asc" }],
+      pagination: { pageSize: 300 },
+    })
+  );
 }
 
 function allocateByProportion(lines: QuoteLine[], amount: number) {
@@ -347,6 +355,25 @@ function evaluatePromotion(
 }
 
 export default factories.createCoreService("api::promotion.promotion", ({ strapi }) => ({
+  async listAvailablePromotions() {
+    const nowIso = new Date().toISOString();
+    const data = await fetchActivePromotions(strapi, nowIso);
+
+    return data
+      .map((promotion: any) => mapPromotionSummary(promotion))
+      .filter((promotion) => promotion.enabled);
+  },
+
+  async listMyCoupons() {
+    const nowIso = new Date().toISOString();
+    const nowMs = Date.now();
+    const data = await fetchActivePromotions(strapi, nowIso);
+
+    return data
+      .filter((promotion: any) => !!promotion?.requiresCoupon)
+      .map((promotion: any) => mapPromotionSummary(promotion, nowMs));
+  },
+
   async quote(input: QuoteInput) {
     const nowIso = new Date().toISOString();
 
@@ -400,10 +427,13 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
     if (docIds.length) whereOr.push({ documentId: { $in: docIds } });
     if (slugs.length) whereOr.push({ slug: { $in: slugs } });
 
-    const products = await strapi.db.query("api::product.product").findMany({
-      where: whereOr.length ? { $or: whereOr } : {},
-      select: ["id", "documentId", "title", "slug", "price", "off", "category"] as any,
-      limit: Math.max(200, ids.length + docIds.length),
+    const products = await strapi.documents(PRODUCT_UID).findMany({
+      status: "published" as any,
+      filters: whereOr.length ? { $or: whereOr } : {},
+      fields: ["documentId", "title", "slug", "price", "off", "category"] as any,
+      pagination: {
+        pageSize: Math.max(200, ids.length + docIds.length + slugs.length),
+      },
     });
 
     const byId = new Map<number, any>();
@@ -470,20 +500,7 @@ export default factories.createCoreService("api::promotion.promotion", ({ strapi
       };
     }
 
-    const promos = asArray(
-      await strapi.entityService.findMany("api::promotion.promotion", {
-        status: "published" as any,
-        filters: {
-          enabled: true,
-          $and: [
-            { $or: [{ startAt: null }, { startAt: { $lte: nowIso } }] },
-            { $or: [{ endAt: null }, { endAt: { $gte: nowIso } }] },
-          ],
-        },
-        sort: [{ priority: "asc" }, { id: "asc" }],
-        pagination: { pageSize: 300 },
-      })
-    );
+    const promos = await fetchActivePromotions(strapi, nowIso);
 
     const context = { lines, subtotal, totalItems, totalBoxes, shipping, couponRequested: false };
     const evaluated = promos

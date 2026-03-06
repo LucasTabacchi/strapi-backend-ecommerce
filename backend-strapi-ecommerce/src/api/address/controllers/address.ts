@@ -1,19 +1,12 @@
 import { factories } from "@strapi/strapi";
 
 function asRecord(v: unknown): Record<string, any> {
-  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, any>) : {};
+  return v && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, any>)
+    : {};
 }
 
 function buildOwnerFilter(user: any) {
-  if (user?.email) {
-    return {
-      $or: [
-        { user: { id: { $eq: user.id } } },
-        { user: { email: { $eqi: user.email } } },
-      ],
-    };
-  }
-
   return { user: { id: { $eq: user.id } } };
 }
 

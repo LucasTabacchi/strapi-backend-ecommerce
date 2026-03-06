@@ -6,6 +6,7 @@ export default {
       handler: "order.my",
       config: {
         auth: { scope: ["api::order.order.find"] },
+        policies: ["api::order.customer-only"],
       },
     },
   ],
