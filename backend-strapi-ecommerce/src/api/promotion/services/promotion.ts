@@ -131,6 +131,7 @@ function mapPromotionSummary(p: any, nowMs?: number) {
 
   return {
     id: p?.id,
+    documentId: normStr(p?.documentId) || null,
     name: p?.name,
     description: p?.description ?? null,
     enabled: !!p?.enabled,
