@@ -58,6 +58,14 @@ type EvaluatedPromotion = {
 
 const PRODUCT_UID = "api::product.product";
 const PROMOTION_UID = "api::promotion.promotion";
+const ACTIVE_PROMOTIONS_CACHE_TTL_MS = 300_000;
+
+let activePromotionsCache:
+  | {
+      data: any[];
+      expiresAt: number;
+    }
+  | null = null;
 
 function asArray<T = any>(v: any): T[] {
   return Array.isArray(v) ? v : [];
@@ -162,7 +170,12 @@ function mapPromotionSummary(p: any, nowMs?: number) {
 }
 
 async function fetchActivePromotions(strapi: any, nowIso: string) {
-  return asArray(
+  const now = Date.now();
+  if (activePromotionsCache && activePromotionsCache.expiresAt > now) {
+    return activePromotionsCache.data;
+  }
+
+  const data = asArray(
     await strapi.documents(PROMOTION_UID).findMany({
       status: "published" as any,
       filters: buildActivePromotionFilters(nowIso),
@@ -170,6 +183,13 @@ async function fetchActivePromotions(strapi: any, nowIso: string) {
       pagination: { pageSize: 300 },
     })
   );
+
+  activePromotionsCache = {
+    data,
+    expiresAt: now + ACTIVE_PROMOTIONS_CACHE_TTL_MS,
+  };
+
+  return data;
 }
 
 function allocateByProportion(lines: QuoteLine[], amount: number) {

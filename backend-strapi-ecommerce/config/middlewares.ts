@@ -15,6 +15,7 @@ export default ({ env }) => [
   "strapi::logger",
   "strapi::query",
   "strapi::body",
+  "global::public-api-cache",
 
   {
     name: "strapi::session",
